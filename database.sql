@@ -102,15 +102,12 @@
 --AFTER INSERT
 --AS
 --	declare @studentid as nvarchar(200)
---	select @studentid = i.studentid from inserted i;
-	
+--	select @studentid = i.studentid from inserted i;	
 --	insert into studentssubjects select * from studentssubjectsView where studentid= @studentid 
 
 -- Trigger to add a field to every student.
 -- Makes sure that when a field is added to a subject, each student that takes that subject has a field in the
 -- StudentFields table
-
-
 --create trigger studentFieldTrigger
 --on subjectfields
 --AFTER INSERT
@@ -124,8 +121,25 @@
 --	insert into studentfields 
 --		select studentssubjects.studentid, studentssubjects.subjectid, 
 --					subjectfields.fieldid,subjectfields.fieldname, studentMarks = 0, subjectfields.maxmarks
---		from subjectfields join studentssubjects on subjectfields.subjectid= studentssubjects.subjectid
---			where studentssubjects.subjectid=@subjectid and subjectfields.fieldid=@fieldid
+--		from subjectfields join studentssubjects
+--			on subjectfields.subjectid= studentssubjects.subjectid
+--		where studentssubjects.subjectid=@subjectid and subjectfields.fieldid=@fieldid
+
+----------
+-- This trigger will make sure to add relevant student details in the studentfields table when a student is added
+create trigger addStudentToStudentFieldsTrigger
+on students
+after insert
+as
+	declare @studentid as int
+	
+		insert into studentfields 
+		select studentssubjects.studentid, studentssubjects.subjectid, 
+					subjectfields.fieldid,subjectfields.fieldname, studentMarks = 0, subjectfields.maxmarks
+		from subjectfields join studentssubjects
+			on subjectfields.subjectid= studentssubjects.subjectid
+		where studentid = @studentid
+
 
 
 --select * from classes
@@ -133,13 +147,13 @@
 --select * from students
 --select * from studentssubjects
 
---insert into subjectFields(subjectid, fieldname, maxMarks) values(300, 'assignment',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(300, 'assignment2',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(301, 'assignment1',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(301, 'test1',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(302, 'test1',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(303, 'presentation1',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(303, 'presentation2',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(304, 'test1',40)
---insert into subjectFields(subjectid, fieldname, maxMarks) values(304, 'assignment',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(200, 'assignment',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(200, 'assignment2',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(201, 'assignment1',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(201, 'test1',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(202, 'test1',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(203, 'presentation1',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(203, 'presentation2',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(204, 'test1',40)
+--insert into subjectFields(subjectid, fieldname, maxMarks) values(204, 'assignment',40)
 
