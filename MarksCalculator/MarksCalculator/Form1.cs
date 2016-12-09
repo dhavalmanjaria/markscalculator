@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Diagnostics;
 
 namespace MarksCalculator
 {
@@ -98,12 +99,126 @@ namespace MarksCalculator
             DataTable subjectsDataTable = new DataTable();
             subjectsDataTable = ds.Tables["studentFieldsWithNames"].Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'").CopyToDataTable();
 
-            this.dataGridView1.DataSource = subjectsDataTable;
+            this.dataGridView1.DataSource = getPivotedDataTable();
             this.dataGridView1.Refresh();
         }
 
+        public DataTable getPivotedDataTable()
+        {
+            DataTable pivotedTable = new DataTable();
+
+            // First we get the subjectid
+            
+            int subjectId = Convert.ToInt32(
+                ds.Tables["subjects"]
+                    .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
+                    .First()["subjectid"]);
+
+            Debug.WriteLine(subjectId);
+
+            // Then we get the fieldids and names for that subject
+            DataTable fieldIdAndNameTable = getFieldIdAndNameTable(subjectId);
+            
+            // So now we create a column string 
+            
+            // for use in the pivot function
+            List<string> fieldIdList = new List<string>();
+            foreach(DataRow row in fieldIdAndNameTable.Rows)
+            {
+                fieldIdList.Add("[" + row["fieldid"] + "]");
+            }
+            String colsInPivot = String.Join(",", fieldIdList.Distinct());
+            
+            // for use in the select part
+            
 
 
+
+            // Now we build the pivoted query, i.e. populate the [40x],[...] part
+
+            String query = String.Format(@"select studentid, studentname, {0} from
+	                        (
+		                        select students.studentid, students.studentname, fieldid, studentmarks, maxmarks 
+		                        from studentFields join subjects
+			                        on studentFields.subjectid = subjects.subjectid
+		                        join students
+			                        on studentFields.studentid = students.studentid
+		                        where studentFields.subjectid = '{1}'
+	                        ) as tab
+	                        pivot
+	                        (
+		                        max(studentmarks) for fieldid in ({0})
+	                        ) as pvt", colsInPivot.ToString(), subjectId);
+
+
+            SqlDataAdapter pivotedAdapter = new SqlDataAdapter(query, conn);
+
+            if (ds.Tables["pivotedStudentFields"] != null)
+            {
+                ds.Tables.Remove("pivotedStudentFields");
+                pivotedAdapter.Fill(ds, "pivotedStudentFields");
+            }
+            else
+            {
+                pivotedAdapter.Fill(ds, "pivotedStudentFields");
+            }
+
+            // Finally, get the table
+
+            return ds.Tables["pivotedStudentFields"];
+        }
+
+        public DataTable getFieldIdAndNameTable(int subjectid)
+        {
+            DataRow[] rowCollection = ds.Tables["studentFields"]
+                                    .Select("subjectid = " + subjectid);
+
+            DataTable fieldIdAndNameTable = new DataTable();
+            fieldIdAndNameTable.Columns.Add("fieldid");
+            fieldIdAndNameTable.Columns.Add("fieldname");
+
+            foreach(DataRow row in rowCollection)
+            {
+                fieldIdAndNameTable.Rows.Add(row["fieldid"], row["fieldname"]);
+            }
+
+            return fieldIdAndNameTable;
+        }
+
+
+        public List<string> getColIdsList(int subjectid)
+        {
+            DataRow[] rowCollection = ds.Tables["studentFields"]
+                                    .Select("subjectid = " + subjectid);
+
+            List<string> fieldIdList = new List<string>();
+            foreach (DataRow row in rowCollection)
+            {
+                // Make sure we only add distinct values
+                string fieldid = row["fieldid"].ToString();
+                if (!fieldIdList.Contains(fieldid))
+
+                    fieldIdList.Add(fieldid);
+            }
+
+            return fieldIdList;
+        }
+
+        public List<string> getColNamesList(int subjectid)
+        {
+            DataRow[] rowCollection = ds.Tables["studentFields"]
+                                    .Select("subjectid = " + subjectid);
+
+            List<string> fieldNameList = new List<string>();
+            foreach (DataRow row in rowCollection)
+            {
+                // Make sure we only add distinct values
+                string fieldname = row["fieldname"].ToString();
+                if (!fieldNameList.Contains(fieldname))
+                    fieldNameList.Add(fieldname);
+            }
+            return fieldNameList;
+        }
        
     }
 }
