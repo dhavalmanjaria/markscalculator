@@ -1,4 +1,6 @@
 ﻿Imports System.Data.SqlClient
+Imports System.Data
+Imports System.Diagnostics
 
 Public Class Form1
 
@@ -67,14 +69,33 @@ Public Class Form1
         Me.DataGridView1.DataSource = Nothing
         Me.DataGridView1.Refresh()
 
+        Dim subjectDataTable = ds.Tables("studentFieldsByClassname").Select("subjectname = '" & SubjectComboBox.SelectedItem.ToString() & "'").CopyToDataTable()
 
-        Dim subjectDataTable = New DataTable()
+        ' Get subjectid
+        Dim row = ds.Tables("subjects").Select("subjectname = '" & SubjectComboBox.SelectedItem.ToString() & "'").First()
+        Dim subjectid = row("subjectid").ToString()
 
-        For Each column In ds.Tables("studentFields").Columns
-            subjectDataTable.Columns.Add(column.ToString())
+        Dim fieldTable = getFields(subjectid)
+
+        Dim columnList As List(Of String) = New List(Of String)
+        For Each row In fieldTable.Rows
+            columnList.Add(row("fieldname").ToString())
         Next
+        Dim cols = String.Join(",", columnList)
+        Debug.WriteLine(cols)
+        Dim pivotQuery = String.Format("Select studentid, studentname, subjectname")
+        Me.DataGridView1.DataSource = subjectDataTable
+        Me.DataGridView1.Refresh()
 
-        
-        ' Me.DataGridView1.DataSource = subjectDataTable
     End Sub
+
+    Public Function getFields(ByVal subjectid As Integer) As DataTable
+        ' First get all the fields for a subject
+        Dim adapter = New SqlDataAdapter("SELECT fieldid, fieldname from subjectfields where subjectid = " & subjectid, conn)
+        Dim fieldSet = New DataSet()
+        adapter.Fill(fieldSet, "fields")
+
+        Return fieldSet.Tables(0)
+
+    End Function
 End Class

@@ -159,15 +159,15 @@
 
 select distinct(fieldid) from studentfields where subjectid = 201
 
-select studentid, [401], [402], [403], [404], [405], [406], [407], [408], [409] 
-from
-	(select studentid, fieldid, studentMarks from studentfields where subjectid=201) as tab
-	pivot
-	(
-		max(studentmarks) for fieldid in([401], [402], [403], [404], [405], [406], [407], [408], [409])
-	) as pvt
+--select studentid, [401], [402], [403], [404], [405], [406], [407], [408], [409] 
+--from
+--	(select studentid, fieldid, studentMarks from studentfields where subjectid=201) as tab
+--	pivot
+--	(
+--		max(studentmarks) for fieldid in([401], [402], [403], [404], [405], [406], [407], [408], [409])
+--	) as pvt
 
-create procedure studentFeildDetailsByClassname
+create procedure getStudentFields
 	@classname nvarchar(100)
 as
 	select students.studentid, students.studentname, subjectname, fieldid, fieldname, studentmarks, maxmarks 
@@ -175,5 +175,17 @@ as
 			on studentFields.subjectid = subjects.subjectid
 		join students
 			on studentFields.studentid = students.studentid
-	where subjects.classname = @classname
+	where subjects.classname = @classname 
+
 	order by studentname
+
+
+
+--select students.studentid, students.studentname, subjectname, fieldid, fieldname, studentmarks, maxmarks 
+--		from studentFields join subjects
+--			on studentFields.subjectid = subjects.subjectid
+--		join students
+--			on studentFields.studentid = students.studentid
+--		where subjects.classname = 'bca1'
+
+--select * from subjectfield
