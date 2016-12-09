@@ -61,7 +61,6 @@ namespace MarksCalculator
             this.dataGridView1.DataSource = null;
             this.dataGridView1.Refresh();
 
-            int selectedSubjectId;
             foreach(DataRow row in ds.Tables["subjects"].Select("classname = '" + cmbClasses.SelectedItem.ToString() + "'"))
             {
                 cmbSubjects.Items.Add(row["subjectname"]);
@@ -120,36 +119,7 @@ namespace MarksCalculator
             DataTable fieldIdAndNameTable = getFieldIdAndNameTable(subjectId);
             
             // So now we create a column string 
-            
-            // for use in the pivot function
-            List<string> fieldIdList = new List<string>();
-            foreach(DataRow row in fieldIdAndNameTable.Rows)
-            {
-                fieldIdList.Add("[" + row["fieldid"] + "]");
-            }
-            String colsInPivot = String.Join(",", fieldIdList.Distinct());
-            
-            // for use in the select part
-            
-
-
-
-            // Now we build the pivoted query, i.e. populate the [40x],[...] part
-
-            String query = String.Format(@"select studentid, studentname, {0} from
-	                        (
-		                        select students.studentid, students.studentname, fieldid, studentmarks, maxmarks 
-		                        from studentFields join subjects
-			                        on studentFields.subjectid = subjects.subjectid
-		                        join students
-			                        on studentFields.studentid = students.studentid
-		                        where studentFields.subjectid = '{1}'
-	                        ) as tab
-	                        pivot
-	                        (
-		                        max(studentmarks) for fieldid in ({0})
-	                        ) as pvt", colsInPivot.ToString(), subjectId);
-
+            String query = getPivotQuery(fieldIdAndNameTable, subjectId);
 
             SqlDataAdapter pivotedAdapter = new SqlDataAdapter(query, conn);
 
@@ -163,7 +133,6 @@ namespace MarksCalculator
                 pivotedAdapter.Fill(ds, "pivotedStudentFields");
             }
 
-            // Finally, get the table
 
             return ds.Tables["pivotedStudentFields"];
         }
@@ -185,40 +154,41 @@ namespace MarksCalculator
             return fieldIdAndNameTable;
         }
 
-
-        public List<string> getColIdsList(int subjectid)
+        public string getPivotQuery(DataTable fieldIdAndNameTable, int subjectid)
         {
-            DataRow[] rowCollection = ds.Tables["studentFields"]
-                                    .Select("subjectid = " + subjectid);
-
+            // for use in the pivot function
             List<string> fieldIdList = new List<string>();
-            foreach (DataRow row in rowCollection)
+            foreach (DataRow row in fieldIdAndNameTable.Rows)
             {
-                // Make sure we only add distinct values
-                string fieldid = row["fieldid"].ToString();
-                if (!fieldIdList.Contains(fieldid))
-
-                    fieldIdList.Add(fieldid);
+                fieldIdList.Add("[" + row["fieldid"] + "]");
             }
+            String colsInPivot = String.Join(",", fieldIdList.Distinct());
 
-            return fieldIdList;
-        }
-
-        public List<string> getColNamesList(int subjectid)
-        {
-            DataRow[] rowCollection = ds.Tables["studentFields"]
-                                    .Select("subjectid = " + subjectid);
-
-            List<string> fieldNameList = new List<string>();
-            foreach (DataRow row in rowCollection)
+            // for use in the select part
+            List<string> fieldNamesList = new List<string>();
+            foreach (DataRow row in fieldIdAndNameTable.Rows)
             {
-                // Make sure we only add distinct values
-                string fieldname = row["fieldname"].ToString();
-                if (!fieldNameList.Contains(fieldname))
-                    fieldNameList.Add(fieldname);
+                fieldNamesList.Add("[" + row["fieldid"] + "] as " + row["fieldname"]);
             }
-            return fieldNameList;
+            String colsInSelect = String.Join(",", fieldNamesList.Distinct());
+
+            // Now we build the pivoted query
+            String query = String.Format(@"select studentid, studentname, {0} from
+	                        (
+		                        select students.studentid, students.studentname, fieldid, studentmarks
+		                        from studentFields join subjects
+			                        on studentFields.subjectid = subjects.subjectid
+		                        join students
+			                        on studentFields.studentid = students.studentid
+		                        where studentFields.subjectid = '{1}'
+	                        ) as tab
+	                        pivot
+	                        (
+		                        max(studentmarks) for fieldid in ({2})
+	                        ) as pvt", colsInSelect, subjectid , colsInPivot.ToString());
+
+            
+            return query;
         }
-       
     }
 }
