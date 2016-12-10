@@ -39,12 +39,7 @@ namespace MarksCalculator
             classesAdapter = new SqlDataAdapter("SELECT * FROM classes", conn);
             classesAdapter.Fill(ds, "classes");
 
-            // Populate dgv
-            this.dataGridView1.DataSource = ds.Tables["studentFields"];
-
             // Fill comboBox
-            
-
             foreach(DataRow row in ds.Tables["classes"].Rows)
             {
                 cmbClasses.Items.Add(row["classname"]);
@@ -83,11 +78,8 @@ namespace MarksCalculator
                 studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
             }
             
-
-            
             this.dataGridView1.DataSource = ds.Tables["studentFieldsWithNames"];
             this.dataGridView1.Refresh();
-
         }
 
         private void cmbSubjects_SelectedIndexChanged(object sender, EventArgs e)
@@ -100,6 +92,13 @@ namespace MarksCalculator
 
             this.dataGridView1.DataSource = getPivotedDataTable();
             this.dataGridView1.Refresh();
+
+            // Set non-field columns as read only
+            int fieldColumnOffset = getFieldColumnOffsetInPivot();
+            for (int i = 0; i < fieldColumnOffset; i++)
+            {
+                this.dataGridView1.Columns[i].ReadOnly = true;
+            }
         }
 
         public DataTable getPivotedDataTable()
@@ -107,11 +106,8 @@ namespace MarksCalculator
             DataTable pivotedTable = new DataTable();
 
             // First we get the subjectid
-            
-            int subjectId = Convert.ToInt32(
-                ds.Tables["subjects"]
-                    .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
-                    .First()["subjectid"]);
+
+            int subjectId = getCurrentSubjectId();
 
             Debug.WriteLine(subjectId);
 
@@ -187,8 +183,110 @@ namespace MarksCalculator
 		                        max(studentmarks) for fieldid in ({2})
 	                        ) as pvt", colsInSelect, subjectid , colsInPivot.ToString());
 
+            Debug.WriteLine(query);
             
             return query;
         }
+
+        /**
+         * This function gets the offset for where the fields start in the pivot table
+         * This is so that we can know what columns to update when changes are made
+         */
+        public int getFieldColumnOffsetInPivot()
+        {
+            // Get subjectid
+            int subjectid = getCurrentSubjectId();
+
+            DataTable fieldNameTable = getFieldIdAndNameTable(subjectid);
+
+            DataTable pivotTable = getPivotedDataTable();
+            
+            List<string> fields = new List<string>();
+            foreach(DataRow row in fieldNameTable.Rows)
+            {
+                fields.Add(row["fieldname"].ToString());
+            }
+
+            int offset = 0;
+            foreach(DataColumn col in pivotTable.Columns)
+            {
+                if (fields.Contains(col.ColumnName))
+                {
+                    return offset;
+                } 
+                else
+                {
+                    offset++;
+                }
+                
+            }
+            return -1;
+        }
+
+        public int getCurrentSubjectId()
+        {
+            int subjectid = Convert.ToInt32(
+                    ds.Tables["subjects"]
+                        .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
+                        .First()["subjectid"]);
+
+            return subjectid;
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            // First get a column index
+            String colName = this.dataGridView1
+                            .Columns[this.dataGridView1.CurrentCell.ColumnIndex]
+                            .ToString();
+
+            int newValue = Convert.ToInt32(dataGridView1.CurrentCell.Value);
+
+            int fieldColumnOffset = getFieldColumnOffsetInPivot();
+
+            // Taking the fieldColumn offset, we map the column in the pivot table to it's relevant field
+            List<int> fieldIds = new List<int>();
+            foreach(DataRow row in getFieldIdAndNameTable(getCurrentSubjectId()).Rows)
+            {
+                int id = Convert.ToInt32(row["fieldid"]); 
+                // Make sure it's distinct
+                if (!fieldIds.Contains(id))
+                {
+                    fieldIds.Add(id);
+                }
+            }
+
+            int fieldIdToUpdate = fieldIds[this.dataGridView1.CurrentCell.ColumnIndex - fieldColumnOffset];
+
+            Debug.WriteLine(fieldIdToUpdate);
+            int studentid = Convert.ToInt32(this.dataGridView1.CurrentRow.Cells["studentid"].Value);
+
+            // Now that we have the studentid and fieldid, we have enough to update student marks.
+            DataRow rowToUpdate = ds.Tables["studentFields"]
+                                    .Select("studentid = " + studentid + " and fieldid = " + fieldIdToUpdate)
+                                    .First();
+
+            int maxMarks = Convert.ToInt32(rowToUpdate["maxMarks"]);
+
+            if(newValue > maxMarks)
+            {
+                MessageBox.Show("Marks given greater than max marks");
+                return;
+            }
+
+            String query = String.Format("UPDATE studentFields SET studentMarks = {0} where fieldid = {1} and studentid = {2}", newValue, fieldIdToUpdate, studentid);
+            SqlCommand cmd = new SqlCommand(query, conn);
+            Debug.WriteLine("update query: " + query);
+
+            conn.Open();
+            cmd.ExecuteNonQuery();
+            conn.Close();
+        }
     }
 }
+    
