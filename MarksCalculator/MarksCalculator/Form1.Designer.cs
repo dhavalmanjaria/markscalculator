@@ -42,7 +42,7 @@
             // cmbClasses
             // 
             this.cmbClasses.FormattingEnabled = true;
-            this.cmbClasses.Location = new System.Drawing.Point(12, 21);
+            this.cmbClasses.Location = new System.Drawing.Point(12, 59);
             this.cmbClasses.Name = "cmbClasses";
             this.cmbClasses.Size = new System.Drawing.Size(121, 21);
             this.cmbClasses.TabIndex = 0;
@@ -51,7 +51,7 @@
             // cmbSubjects
             // 
             this.cmbSubjects.FormattingEnabled = true;
-            this.cmbSubjects.Location = new System.Drawing.Point(12, 86);
+            this.cmbSubjects.Location = new System.Drawing.Point(12, 107);
             this.cmbSubjects.Name = "cmbSubjects";
             this.cmbSubjects.Size = new System.Drawing.Size(121, 21);
             this.cmbSubjects.TabIndex = 0;
@@ -68,6 +68,7 @@
             // 
             this.splitContainer1.Panel1.Controls.Add(this.cmbClasses);
             this.splitContainer1.Panel1.Controls.Add(this.cmbSubjects);
+            this.splitContainer1.Panel1.Paint += new System.Windows.Forms.PaintEventHandler(this.splitContainer1_Panel1_Paint);
             // 
             // splitContainer1.Panel2
             // 

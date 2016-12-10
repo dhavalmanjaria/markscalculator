@@ -19,6 +19,7 @@ namespace MarksCalculator
         SqlDataAdapter studentFieldsAdapter, classesAdapter, subjectsAdapter, studentFieldsProcAdapter;
         SqlCommandBuilder cmdBuilder;
         String connStr = System.Configuration.ConfigurationManager.ConnectionStrings["connString"].ConnectionString;
+     
         public Form1()
         {
             InitializeComponent();
@@ -286,6 +287,11 @@ namespace MarksCalculator
             conn.Open();
             cmd.ExecuteNonQuery();
             conn.Close();
+        }
+
+        private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }
