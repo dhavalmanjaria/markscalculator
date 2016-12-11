@@ -55,15 +55,34 @@ namespace MarksCalculator
             SqlCommandBuilder cmdBuilder = new SqlCommandBuilder(studentsAdapter);
 
             studentsAdapter.InsertCommand = cmdBuilder.GetInsertCommand(true);
-            MessageBox.Show(studentsAdapter.InsertCommand.CommandText);
             studentsAdapter.Update(ds, "students");
+
+            MessageBox.Show("Student saved successfully.");
 
             isSaved = true;
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            
+            if (!isSaved && txtName.Text != "" && cmbClasses.Text != "")
+            {
+                DialogResult result = MessageBox.Show("Do you want to save the current student?", "Save Student", MessageBoxButtons.OKCancel);
+                if (result == DialogResult.OK)
+                {
+                    btnSave_Click(sender, e);
+                    btnClear_Click(sender, e);
+                }
+            }
+            else
+            {
+                btnClear_Click(sender, e);
+            }
+        }
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            txtName.Text = "";
+            cmbClasses.Text = "";
         }
     }
 }
