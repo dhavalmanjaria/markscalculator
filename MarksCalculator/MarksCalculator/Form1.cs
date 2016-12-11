@@ -268,10 +268,13 @@ namespace MarksCalculator
             int studentid = Convert.ToInt32(this.dataGridView1.CurrentRow.Cells["studentid"].Value);
 
             // Now that we have the studentid and fieldid, we have enough to update student marks.
-            DataRow rowToUpdate = ds.Tables["studentFields"]
-                                    .Select("studentid = " + studentid + " and fieldid = " + fieldIdToUpdate)
-                                    .First();
+            SqlDataAdapter subjectFieldsAdapter = new SqlDataAdapter("SELECT * FROM subjectfields", conn);
+            subjectFieldsAdapter.Fill(ds, "subjectFields");
 
+            DataRow rowToUpdate = ds.Tables["subjectFields"]
+                                    .Select("subjectid = " + getCurrentSubjectId() + " and fieldid = " + fieldIdToUpdate)
+                                    .First();
+            
             int maxMarks = Convert.ToInt32(rowToUpdate["maxMarks"]);
 
             if(newValue > maxMarks)
@@ -292,6 +295,23 @@ namespace MarksCalculator
         private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
         {
 
+        }
+
+        private void studentToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddStudentForm frm = new AddStudentForm();
+            frm.ShowDialog();
+        }
+
+        private void fieldToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddField frm = new AddField();
+            frm.ShowDialog();
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
         }
     }
 }
