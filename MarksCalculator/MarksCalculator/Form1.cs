@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using Microsoft.SqlServer;
 
 namespace MarksCalculator
 {
@@ -27,18 +28,33 @@ namespace MarksCalculator
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            
             conn = new SqlConnection(connStr);
+
+           
+
             studentFieldsAdapter = new SqlDataAdapter("SELECT * FROM studentFields", conn);
 
             // Fill tables
             ds = new DataSet();
-            studentFieldsAdapter.Fill(ds, "studentFields");
 
             subjectsAdapter = new SqlDataAdapter("SELECT * FROM subjects", conn);
-            subjectsAdapter.Fill(ds, "subjects");
-
             classesAdapter = new SqlDataAdapter("SELECT * FROM classes", conn);
-            classesAdapter.Fill(ds, "classes");
+            
+            try
+            {
+                studentFieldsAdapter.Fill(ds, "studentFields");
+                if (ds.Tables["studentFields"] == null)
+                    MessageBox.Show("student fields is null?");
+                classesAdapter.Fill(ds, "classes"); 
+                subjectsAdapter.Fill(ds, "subjects");
+                
+            }
+            catch (SqlException sqlex)
+            {
+                ExceptionDialog ed = new ExceptionDialog(sqlex.Message, sqlex.StackTrace);
+                ed.ShowDialog();
+            }
 
             // Fill comboBox
             foreach(DataRow row in ds.Tables["classes"].Rows)
@@ -69,18 +85,34 @@ namespace MarksCalculator
             getStudentFieldsProcCmd.Connection = conn;
 
             studentFieldsProcAdapter = new SqlDataAdapter(getStudentFieldsProcCmd);
-            if(ds.Tables["studentFieldsWithNames"] != null)
+            if (ds.Tables["studentFieldsWithNames"] != null)
             {
                 ds.Tables["studentFieldsWithNames"].Clear();
-                studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
+                try
+                {
+                    studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
+                }
+                catch (Exception ex)
+                {
+                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+                }
+
             }
             else
             {
-                studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
+                try
+                {
+                    studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
+                }
+                catch (Exception ex)
+                {
+                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+                }
+
             }
             
-            this.dataGridView1.DataSource = ds.Tables["studentFieldsWithNames"];
-            this.dataGridView1.Refresh();
+            //this.dataGridView1.DataSource = ds.Tables["studentFieldsWithNames"];
+            //this.dataGridView1.Refresh();
         }
 
         private void cmbSubjects_SelectedIndexChanged(object sender, EventArgs e)
@@ -88,8 +120,8 @@ namespace MarksCalculator
             this.dataGridView1.DataSource = null;
             this.dataGridView1.Refresh();
 
-            DataTable subjectsDataTable = new DataTable();
-            subjectsDataTable = ds.Tables["studentFieldsWithNames"].Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'").CopyToDataTable();
+            //DataTable subjectsDataTable = new DataTable();
+            //subjectsDataTable = ds.Tables["studentFieldsWithNames"].Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'").CopyToDataTable();
 
             this.dataGridView1.DataSource = getPivotedDataTable();
             this.dataGridView1.Refresh();
@@ -123,13 +155,26 @@ namespace MarksCalculator
             if (ds.Tables["pivotedStudentFields"] != null)
             {
                 ds.Tables.Remove("pivotedStudentFields");
-                pivotedAdapter.Fill(ds, "pivotedStudentFields");
+                try
+                {
+                    pivotedAdapter.Fill(ds, "pivotedStudentFields");
+                }
+                catch(Exception ex)
+                {
+                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+                }
             }
             else
             {
-                pivotedAdapter.Fill(ds, "pivotedStudentFields");
+                try
+                {
+                    pivotedAdapter.Fill(ds, "pivotedStudentFields");
+                }
+                catch (Exception ex)
+                {
+                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+                }
             }
-
 
             return ds.Tables["pivotedStudentFields"];
         }
@@ -168,7 +213,7 @@ namespace MarksCalculator
                 fieldNamesList.Add("[" + row["fieldid"] + "] as " + row["fieldname"]);
             }
             String colsInSelect = String.Join(",", fieldNamesList.Distinct());
-
+            
             // Now we build the pivoted query
             String query = String.Format(@"select studentid, studentname, {0} from
 	                        (
@@ -183,6 +228,11 @@ namespace MarksCalculator
 	                        (
 		                        max(studentmarks) for fieldid in ({2})
 	                        ) as pvt", colsInSelect, subjectid , colsInPivot.ToString());
+
+            if (colsInPivot == "" || colsInSelect == "")
+            {
+                query = String.Format(@"select studentid, studentname from students where classname = '{0}'", cmbClasses.SelectedItem.ToString());
+            }
 
             Debug.WriteLine(query);
             
@@ -226,10 +276,14 @@ namespace MarksCalculator
 
         public int getCurrentSubjectId()
         {
-            int subjectid = Convert.ToInt32(
-                    ds.Tables["subjects"]
-                        .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
-                        .First()["subjectid"]);
+            int subjectid = 0;
+            if (cmbSubjects.SelectedItem != null)
+            {
+               subjectid = Convert.ToInt32(
+                        ds.Tables["subjects"]
+                            .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
+                            .First()["subjectid"]);
+            }
 
             return subjectid;
         }
@@ -269,7 +323,15 @@ namespace MarksCalculator
 
             // Now that we have the studentid and fieldid, we have enough to update student marks.
             SqlDataAdapter subjectFieldsAdapter = new SqlDataAdapter("SELECT * FROM subjectfields", conn);
-            subjectFieldsAdapter.Fill(ds, "subjectFields");
+            try
+            {
+                subjectFieldsAdapter.Fill(ds, "subjectFields");
+            }
+            catch (Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+            }
+            
 
             DataRow rowToUpdate = ds.Tables["subjectFields"]
                                     .Select("subjectid = " + getCurrentSubjectId() + " and fieldid = " + fieldIdToUpdate)
@@ -286,10 +348,17 @@ namespace MarksCalculator
             String query = String.Format("UPDATE studentFields SET studentMarks = {0} where fieldid = {1} and studentid = {2}", newValue, fieldIdToUpdate, studentid);
             SqlCommand cmd = new SqlCommand(query, conn);
             Debug.WriteLine("update query: " + query);
-
-            conn.Open();
-            cmd.ExecuteNonQuery();
-            conn.Close();
+            try
+            {
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+                ExceptionDialog ed = new ExceptionDialog(ex.Message, ex.ToString());
+                ed.ShowDialog();
+            }
         }
 
         private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
@@ -307,6 +376,12 @@ namespace MarksCalculator
         {
             AddField frm = new AddField();
             frm.ShowDialog();
+            if (AddField.areFieldsUpdated == true)
+            {
+                this.dataGridView1.DataSource = null;
+                this.dataGridView1.Refresh();
+                this.dataGridView1.DataSource = getPivotedDataTable();
+            }
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)

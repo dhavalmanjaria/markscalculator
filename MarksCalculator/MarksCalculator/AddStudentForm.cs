@@ -70,7 +70,6 @@ namespace MarksCalculator
                 if (result == DialogResult.OK)
                 {
                     btnSave_Click(sender, e);
-                    btnClear_Click(sender, e);
                 }
             }
             else

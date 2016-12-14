@@ -19,10 +19,13 @@ namespace MarksCalculator
         DataSet ds = new DataSet();
         SqlDataAdapter subjectfieldsAdapter, subjectsAdapter;
         String connStr = System.Configuration.ConfigurationManager.ConnectionStrings["connString"].ConnectionString;
+        public static bool areFieldsUpdated;
+
 
         public AddField()
         {
             InitializeComponent();
+            areFieldsUpdated = false;
         }
 
         private void AddField_Load(object sender, EventArgs e)
@@ -30,10 +33,18 @@ namespace MarksCalculator
             conn = new SqlConnection(connStr);
             ds = new DataSet();
             SqlDataAdapter classesAdapter = new SqlDataAdapter("SELECT * FROM classes", conn);
-            classesAdapter.Fill(ds, "classes");
-
             subjectsAdapter = new SqlDataAdapter("SELECT * FROM subjects", conn);
-            subjectsAdapter.Fill(ds, "subjects");
+
+            try
+            {
+                classesAdapter.Fill(ds, "classes");
+                subjectsAdapter.Fill(ds, "subjects");
+            }
+            catch (Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+            }
+            
 
             // Fill comboBox
             foreach (DataRow row in ds.Tables["classes"].Rows)
@@ -84,8 +95,15 @@ namespace MarksCalculator
         private void btnSave_Click(object sender, EventArgs e)
         {
             subjectfieldsAdapter = new SqlDataAdapter("SELECT * FROM subjectfields", conn);
-            subjectfieldsAdapter.Fill(ds, "subjectfields");
-
+            try
+            {
+                subjectfieldsAdapter.Fill(ds, "subjectfields");
+            }
+            catch (Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+            }
+            
             DataRow newRow = ds.Tables["subjectfields"].NewRow();
             newRow["fieldname"] = txtFieldname.Text;
             newRow["subjectid"] = getCurrentSubjectId();
@@ -95,18 +113,33 @@ namespace MarksCalculator
 
             SqlCommandBuilder cmdBuilder = new SqlCommandBuilder(subjectfieldsAdapter);
             subjectfieldsAdapter.InsertCommand = cmdBuilder.GetInsertCommand(true);
+
+            try
+            {
+                subjectfieldsAdapter.Update(ds, "subjectfields");
+            }
+            catch (Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+            }
             
-            subjectfieldsAdapter.Update(ds, "subjectfields");
+            
 
             MessageBox.Show("New field added to " + cmbSubjects.Text + " in course " + cmbClasses.Text);
+            areFieldsUpdated = true;
         }
 
         private void btnClear_Click(object sender, EventArgs e)
         {
             cmbClasses.Text = "";
             cmbSubjects.Text = "";
-            txtFieldname.Clear();
-            txtMaxMarks.Clear();
+            txtFieldname.Text = "";
+            txtMaxMarks.Text = "";
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            cmbClasses.Text = "";
         }
 
         
