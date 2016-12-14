@@ -19,7 +19,7 @@ namespace MarksCalculator
         DataSet ds = new DataSet();
         SqlDataAdapter subjectfieldsAdapter, subjectsAdapter;
         String connStr = System.Configuration.ConfigurationManager.ConnectionStrings["connString"].ConnectionString;
-        public static bool areFieldsUpdated;
+        public bool areFieldsUpdated;
 
 
         public AddField()

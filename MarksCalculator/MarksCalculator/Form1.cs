@@ -77,42 +77,6 @@ namespace MarksCalculator
             {
                 cmbSubjects.Items.Add(row["subjectname"]);
             }
-
-            // This uses a stored procedure because it executes a join
-            SqlCommand getStudentFieldsProcCmd = new SqlCommand("getStudentFields", conn);
-            getStudentFieldsProcCmd.CommandType = CommandType.StoredProcedure;
-            getStudentFieldsProcCmd.Parameters.AddWithValue("@classname", cmbClasses.SelectedItem.ToString());
-            getStudentFieldsProcCmd.Connection = conn;
-
-            studentFieldsProcAdapter = new SqlDataAdapter(getStudentFieldsProcCmd);
-            if (ds.Tables["studentFieldsWithNames"] != null)
-            {
-                ds.Tables["studentFieldsWithNames"].Clear();
-                try
-                {
-                    studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
-                }
-                catch (Exception ex)
-                {
-                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
-                }
-
-            }
-            else
-            {
-                try
-                {
-                    studentFieldsProcAdapter.Fill(ds, "studentFieldsWithNames");
-                }
-                catch (Exception ex)
-                {
-                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
-                }
-
-            }
-            
-            //this.dataGridView1.DataSource = ds.Tables["studentFieldsWithNames"];
-            //this.dataGridView1.Refresh();
         }
 
         private void cmbSubjects_SelectedIndexChanged(object sender, EventArgs e)
@@ -139,10 +103,9 @@ namespace MarksCalculator
             DataTable pivotedTable = new DataTable();
 
             // First we get the subjectid
-
             int subjectId = getCurrentSubjectId();
 
-            Debug.WriteLine(subjectId);
+            Debug.WriteLine("getPivotedDataTable() subjectid = " + subjectId);
 
             // Then we get the fieldids and names for that subject
             DataTable fieldIdAndNameTable = getFieldIdAndNameTable(subjectId);
@@ -150,49 +113,42 @@ namespace MarksCalculator
             // So now we create a column string 
             String query = getPivotQuery(fieldIdAndNameTable, subjectId);
 
+            // Should really use a DataReader but 
+            // we're using an adapter because we still need a DataTable for the dgv
+
             SqlDataAdapter pivotedAdapter = new SqlDataAdapter(query, conn);
 
-            if (ds.Tables["pivotedStudentFields"] != null)
+            DataTable pivotedDataTable = new DataTable();
+            try
             {
-                ds.Tables.Remove("pivotedStudentFields");
-                try
-                {
-                    pivotedAdapter.Fill(ds, "pivotedStudentFields");
-                }
-                catch(Exception ex)
-                {
-                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
-                }
+                pivotedAdapter.Fill(pivotedDataTable);
             }
-            else
+            catch (Exception ex)
             {
-                try
-                {
-                    pivotedAdapter.Fill(ds, "pivotedStudentFields");
-                }
-                catch (Exception ex)
-                {
-                    new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
-                }
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
             }
 
-            return ds.Tables["pivotedStudentFields"];
+            return pivotedDataTable;
         }
 
         public DataTable getFieldIdAndNameTable(int subjectid)
         {
-            DataRow[] rowCollection = ds.Tables["studentFields"]
-                                    .Select("subjectid = " + subjectid);
+            /*
+             * This may actually be a better idea, since we don't get duplicate values and we get fresh values each time
+             * for the pivot query
+             */
 
+            SqlDataAdapter studentFieldsAdapter = new SqlDataAdapter("SELECT distinct(fieldid), fieldname FROM studentFields WHERE subjectid = " + subjectid, conn);
             DataTable fieldIdAndNameTable = new DataTable();
-            fieldIdAndNameTable.Columns.Add("fieldid");
-            fieldIdAndNameTable.Columns.Add("fieldname");
-
-            foreach(DataRow row in rowCollection)
+            try
             {
-                fieldIdAndNameTable.Rows.Add(row["fieldid"], row["fieldname"]);
+                studentFieldsAdapter.Fill(fieldIdAndNameTable);
             }
-
+            catch(Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.StackTrace).ShowDialog();
+            }
+            
             return fieldIdAndNameTable;
         }
 
@@ -376,7 +332,7 @@ namespace MarksCalculator
         {
             AddField frm = new AddField();
             frm.ShowDialog();
-            if (AddField.areFieldsUpdated == true)
+            if (frm.areFieldsUpdated == true)
             {
                 this.dataGridView1.DataSource = null;
                 this.dataGridView1.Refresh();
