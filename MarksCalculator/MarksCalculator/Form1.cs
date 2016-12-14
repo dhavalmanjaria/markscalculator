@@ -31,8 +31,6 @@ namespace MarksCalculator
             
             conn = new SqlConnection(connStr);
 
-           
-
             studentFieldsAdapter = new SqlDataAdapter("SELECT * FROM studentFields", conn);
 
             // Fill tables
@@ -128,7 +126,60 @@ namespace MarksCalculator
                 new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
             }
 
+            // Add calculated column
+
+            addCalculatedColumn(pivotedDataTable, fieldIdAndNameTable);
+
             return pivotedDataTable;
+        }
+
+        void addCalculatedColumn(DataTable pivotedDataTable, DataTable fieldIdAndNameTable)
+        {
+            List<int> values = new List<int>();
+            List<int> maxValues = new List<int>();
+
+            DataColumn calculatedMarks = new DataColumn("calculated marks");
+            pivotedDataTable.Columns.Add(calculatedMarks);
+
+            List<string> fieldNames = new List<string>();
+            List<int> fieldIDs = new List<int>();
+
+            // Get subjectTable for maxMarks
+            SqlDataAdapter adapter = new SqlDataAdapter("SELECT maxMarks FROM subjectFields WHERE subjectid = " + getCurrentSubjectId(), conn);
+            DataTable maxMarksTable = new DataTable();
+            adapter.Fill(maxMarksTable);
+
+            foreach (DataRow row in fieldIdAndNameTable.Rows)
+            {
+                fieldIDs.Add(Convert.ToInt32(row["fieldid"]));
+                fieldNames.Add(row["fieldname"].ToString());
+            }
+
+            foreach (DataRow row in pivotedDataTable.Rows)
+            {
+                values.Clear();
+                maxValues.Clear();
+                // Get marks of the student from pivotedDataTable
+                foreach (DataColumn column in pivotedDataTable.Columns)
+                {
+                    // if the column is a field
+                    if (fieldNames.Contains(column.ColumnName))
+                    {
+                        values.Add(Convert.ToInt32(row[column]));
+                    }
+                }
+
+                // Get max marks
+                foreach (DataRow marksRow in maxMarksTable.Rows)
+                {
+                    maxValues.Add(Convert.ToInt32(marksRow["maxMarks"]));
+                }
+
+                PercentageStrategy pObj = new PercentageStrategy();
+                row[calculatedMarks] = pObj.getResults(values, maxValues);
+            }
+
+            return;
         }
 
         public DataTable getFieldIdAndNameTable(int subjectid)
@@ -166,7 +217,7 @@ namespace MarksCalculator
             List<string> fieldNamesList = new List<string>();
             foreach (DataRow row in fieldIdAndNameTable.Rows)
             {
-                fieldNamesList.Add("[" + row["fieldid"] + "] as " + row["fieldname"]);
+                fieldNamesList.Add("[" + row["fieldid"] + "] as '" + row["fieldname"] + "'");
             }
             String colsInSelect = String.Join(",", fieldNamesList.Distinct());
             
@@ -233,14 +284,14 @@ namespace MarksCalculator
         public int getCurrentSubjectId()
         {
             int subjectid = 0;
-            if (cmbSubjects.SelectedItem != null)
+            if(cmbSubjects.SelectedItem.ToString() != null)
             {
-               subjectid = Convert.ToInt32(
-                        ds.Tables["subjects"]
-                            .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
-                            .First()["subjectid"]);
+                subjectid = Convert.ToInt32(
+                            ds.Tables["subjects"]
+                                .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
+                                .First()["subjectid"]);
             }
-
+                
             return subjectid;
         }
 
@@ -262,7 +313,7 @@ namespace MarksCalculator
 
             // Taking the fieldColumn offset, we map the column in the pivot table to it's relevant field
             List<int> fieldIds = new List<int>();
-            foreach(DataRow row in getFieldIdAndNameTable(getCurrentSubjectId()).Rows)
+            foreach (DataRow row in getFieldIdAndNameTable(getCurrentSubjectId()).Rows)
             {
                 int id = Convert.ToInt32(row["fieldid"]); 
                 // Make sure it's distinct
@@ -272,6 +323,10 @@ namespace MarksCalculator
                 }
             }
 
+            if(this.dataGridView1.CurrentCell.ColumnIndex - fieldColumnOffset > this.dataGridView1.Columns.Count)
+            {
+                return;
+            }
             int fieldIdToUpdate = fieldIds[this.dataGridView1.CurrentCell.ColumnIndex - fieldColumnOffset];
 
             Debug.WriteLine(fieldIdToUpdate);
@@ -315,6 +370,9 @@ namespace MarksCalculator
                 ExceptionDialog ed = new ExceptionDialog(ex.Message, ex.ToString());
                 ed.ShowDialog();
             }
+
+            this.dataGridView1.BeginInvoke(new MethodInvoker(refreshDataGridView));
+            
         }
 
         private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
@@ -337,6 +395,18 @@ namespace MarksCalculator
                 this.dataGridView1.DataSource = null;
                 this.dataGridView1.Refresh();
                 this.dataGridView1.DataSource = getPivotedDataTable();
+            }
+        }
+
+        public void refreshDataGridView()
+        {
+            this.dataGridView1.DataSource = null;
+            this.dataGridView1.DataSource = getPivotedDataTable();
+            this.dataGridView1.Refresh();
+
+            for(int i = 0; i < getFieldColumnOffsetInPivot(); i++)
+            {
+                this.dataGridView1.Columns[i].ReadOnly = true;
             }
         }
 
