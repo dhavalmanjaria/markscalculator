@@ -17,8 +17,7 @@ namespace MarksCalculator
     {
         SqlConnection conn;
         DataSet ds;
-        SqlDataAdapter studentFieldsAdapter, classesAdapter, subjectsAdapter, studentFieldsProcAdapter;
-        SqlCommandBuilder cmdBuilder;
+        SqlDataAdapter studentFieldsAdapter, classesAdapter, subjectsAdapter;
         String connStr = System.Configuration.ConfigurationManager.ConnectionStrings["connString"].ConnectionString;
      
         public Form1()
@@ -82,21 +81,14 @@ namespace MarksCalculator
 
         private void cmbSubjects_SelectedIndexChanged(object sender, EventArgs e)
         {
-            this.dataGridView1.DataSource = null;
-            this.dataGridView1.Refresh();
-
-            //DataTable subjectsDataTable = new DataTable();
-            //subjectsDataTable = ds.Tables["studentFieldsWithNames"].Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'").CopyToDataTable();
-
-            this.dataGridView1.DataSource = getPivotedDataTable();
-            this.dataGridView1.Refresh();
-
             // Set non-field columns as read only
             int fieldColumnOffset = getFieldColumnOffsetInPivot();
             for (int i = 0; i < fieldColumnOffset; i++)
             {
                 this.dataGridView1.Columns[i].ReadOnly = true;
             }
+
+            refreshDataGridView();
         }
 
         public DataTable getPivotedDataTable()
@@ -329,7 +321,7 @@ namespace MarksCalculator
                 }
             }
 
-            if(this.dataGridView1.CurrentCell.ColumnIndex - fieldColumnOffset > this.dataGridView1.Columns.Count)
+            if(this.dataGridView1.CurrentCell.ColumnIndex - fieldColumnOffset >= this.dataGridView1.Columns.Count)
             {
                 return;
             }
@@ -412,6 +404,7 @@ namespace MarksCalculator
             {
                 this.dataGridView1.Columns[i].ReadOnly = true;
             }
+            this.dataGridView1.Columns["calculated Marks"].ReadOnly = true;
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
