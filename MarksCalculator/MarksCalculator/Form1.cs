@@ -71,14 +71,13 @@ namespace MarksCalculator
             cmbSubjects.Text = "";
             cmbSubjects.Items.Clear();
 
-            // This is required to clear the dgv
-            this.dataGridView1.DataSource = null;
-            this.dataGridView1.Refresh();
-
             foreach(DataRow row in ds.Tables["subjects"].Select("classname = '" + cmbClasses.SelectedItem.ToString() + "'"))
             {
                 cmbSubjects.Items.Add(row["subjectname"]);
             }
+
+            refreshDataGridView();
+            this.dataGridView1.Columns.Remove("calculated Marks");
         }
 
         private void cmbSubjects_SelectedIndexChanged(object sender, EventArgs e)
@@ -117,7 +116,6 @@ namespace MarksCalculator
 
             // Should really use a DataReader but 
             // we're using an adapter because we still need a DataTable for the dgv
-
             SqlDataAdapter pivotedAdapter = new SqlDataAdapter(query, conn);
 
             DataTable pivotedDataTable = new DataTable();
@@ -360,7 +358,7 @@ namespace MarksCalculator
 
             if(newValue > maxMarks)
             {
-                MessageBox.Show("Marks given greater than max marks");
+                MessageBox.Show("Marks given greater than max marks ("+maxMarks+")");
                 return;
             }
 
@@ -419,6 +417,11 @@ namespace MarksCalculator
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.Close();
+        }
+
+        private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            refreshDataGridView();
         }
     }
 }
