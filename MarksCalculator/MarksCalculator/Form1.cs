@@ -59,6 +59,10 @@ namespace MarksCalculator
             {
                 cmbClasses.Items.Add(row["classname"]);
             }
+
+            // Intialize comboboxes to prevent NREs
+            cmbClasses.SelectedIndex = 0;
+            cmbSubjects.SelectedIndex = 0;
         }
 
         private void cmbClasses_SelectedIndexChanged(object sender, EventArgs e)
@@ -284,12 +288,16 @@ namespace MarksCalculator
         public int getCurrentSubjectId()
         {
             int subjectid = 0;
-            if(cmbSubjects.SelectedItem.ToString() != null)
+            try
             {
                 subjectid = Convert.ToInt32(
                             ds.Tables["subjects"]
                                 .Select("subjectname = '" + cmbSubjects.SelectedItem.ToString() + "'")
                                 .First()["subjectid"]);
+            }
+            catch(NullReferenceException nre)
+            {
+                subjectid = 0;
             }
                 
             return subjectid;
@@ -392,9 +400,7 @@ namespace MarksCalculator
             frm.ShowDialog();
             if (frm.areFieldsUpdated == true)
             {
-                this.dataGridView1.DataSource = null;
-                this.dataGridView1.Refresh();
-                this.dataGridView1.DataSource = getPivotedDataTable();
+                refreshDataGridView();
             }
         }
 

@@ -123,8 +123,6 @@ namespace MarksCalculator
                 new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
             }
             
-            
-
             MessageBox.Show("New field added to " + cmbSubjects.Text + " in course " + cmbClasses.Text);
             areFieldsUpdated = true;
         }
@@ -141,7 +139,5 @@ namespace MarksCalculator
         {
             txtFieldname.Text = "";
         }
-
-        
     }
 }
