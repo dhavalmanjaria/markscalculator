@@ -120,12 +120,12 @@ namespace MarksCalculator
 
             // Add calculated column
 
-            addCalculatedColumn(pivotedDataTable, fieldIdAndNameTable);
+            addCalculatedColumn(pivotedDataTable, fieldIdAndNameTable, new TwentyMarkStrategy());
 
             return pivotedDataTable;
         }
 
-        void addCalculatedColumn(DataTable pivotedDataTable, DataTable fieldIdAndNameTable)
+        void addCalculatedColumn(DataTable pivotedDataTable, DataTable fieldIdAndNameTable, ICalcuation calculationStrategy)
         {
             List<int> values = new List<int>();
             List<int> maxValues = new List<int>();
@@ -167,8 +167,7 @@ namespace MarksCalculator
                     maxValues.Add(Convert.ToInt32(marksRow["maxMarks"]));
                 }
 
-                PercentageStrategy pObj = new PercentageStrategy();
-                row[calculatedMarks] = pObj.getResults(values, maxValues);
+                row[calculatedMarks] = calculationStrategy.getResults(values, maxValues);
             }
 
             return;

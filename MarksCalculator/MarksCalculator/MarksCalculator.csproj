@@ -91,6 +91,7 @@
     <Compile Include="PercentageStrategy.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TwentyMarkStrategy.cs" />
     <EmbeddedResource Include="AddField.resx">
       <DependentUpon>AddField.cs</DependentUpon>
     </EmbeddedResource>
