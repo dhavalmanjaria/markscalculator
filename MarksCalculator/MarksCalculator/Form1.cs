@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using Microsoft.SqlServer;
 
 namespace MarksCalculator
 {
@@ -27,7 +26,6 @@ namespace MarksCalculator
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
             conn = new SqlConnection(connStr);
 
             studentFieldsAdapter = new SqlDataAdapter("SELECT * FROM studentFields", conn);
@@ -295,7 +293,7 @@ namespace MarksCalculator
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-
+            this.dataGridView1.ClearSelection(); 
         }
 
         private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
@@ -304,6 +302,7 @@ namespace MarksCalculator
             String colName = this.dataGridView1
                             .Columns[this.dataGridView1.CurrentCell.ColumnIndex]
                             .ToString();
+            
 
             int newValue = Convert.ToInt32(dataGridView1.CurrentCell.Value);
 
@@ -398,8 +397,9 @@ namespace MarksCalculator
         {
             this.dataGridView1.DataSource = null;
             this.dataGridView1.DataSource = getPivotedDataTable();
+            
             this.dataGridView1.Refresh();
-
+            
             for(int i = 0; i < getFieldColumnOffsetInPivot(); i++)
             {
                 this.dataGridView1.Columns[i].ReadOnly = true;
@@ -415,6 +415,12 @@ namespace MarksCalculator
         private void refreshToolStripMenuItem_Click(object sender, EventArgs e)
         {
             refreshDataGridView();
+        }
+
+        private void dataGridView1_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            // Fixes bug where a part of the DGV was selected if another cell was clicked before the edit ended.
+            this.dataGridView1.ClearSelection();
         }
     }
 }
