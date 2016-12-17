@@ -301,10 +301,11 @@ namespace MarksCalculator
             String colName = this.dataGridView1
                             .Columns[this.dataGridView1.CurrentCell.ColumnIndex]
                             .ToString();
-            
 
-            int newValue = Convert.ToInt32(dataGridView1.CurrentCell.Value);
+            int newValue ;
 
+            Int32.TryParse(this.dataGridView1.CurrentCell.Value.ToString(), out newValue);
+       
             int fieldColumnOffset = getFieldColumnOffsetInPivot();
 
             // Taking the fieldColumn offset, we map the column in the pivot table to it's relevant field
@@ -348,7 +349,7 @@ namespace MarksCalculator
 
             if(newValue > maxMarks)
             {
-                MessageBox.Show("Marks given greater than max marks ("+maxMarks+")");
+                MessageBox.Show("Marks given greater than max marks ("+maxMarks+"). Value will not be saved");
                 return;
             }
 
@@ -420,6 +421,11 @@ namespace MarksCalculator
         {
             // Fixes bug where a part of the DGV was selected if another cell was clicked before the edit ended.
             this.dataGridView1.ClearSelection();
+        }
+
+        private void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            MessageBox.Show("Please enter only numbers");
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SqlClient;
+using System.Diagnostics;
 
 namespace MarksCalculator
 {
@@ -20,8 +21,10 @@ namespace MarksCalculator
         // This variable is used to see if the current in the textboxes is saved in the db or not.
         Boolean isSaved = false;
 
+        
         public AddStudentForm()
         {
+            Debug.AutoFlush = true;
             InitializeComponent();
         }
         
@@ -41,24 +44,34 @@ namespace MarksCalculator
 
         private void btnSave_Click(object sender, EventArgs e)
         {
+            try
+            {
+                SqlDataAdapter studentsAdapter = new SqlDataAdapter("SELECT * FROM students", conn);
+
+                DataTable studentsTable = new DataTable();
+                studentsAdapter.Fill(studentsTable);
+
+                DataRow row = studentsTable.NewRow();
+                row["studentname"] = txtName.Text;
+                row["classname"] = cmbClasses.SelectedItem.ToString();
+                studentsTable.Rows.Add(row);
+
+                SqlCommandBuilder cmdBuilder = new SqlCommandBuilder(studentsAdapter);
+
+                studentsAdapter.InsertCommand = cmdBuilder.GetInsertCommand(true);
+
+                studentsAdapter.Update(studentsTable);
+
+                MessageBox.Show("Student saved successfully.");
+
+            }
+            catch(Exception ex)
+            {
+                new ExceptionDialog(ex.Message, ex.ToString()).ShowDialog();
+            }
             isSaved = false;
 
-            SqlDataAdapter studentsAdapter = new SqlDataAdapter("SELECT * FROM students", conn);
-
-            studentsAdapter.Fill(ds, "students");
-
-            DataRow row = ds.Tables["students"].NewRow();
-            row["studentname"] = txtName.Text;
-            row["classname"] = cmbClasses.SelectedItem.ToString();
-            ds.Tables["students"].Rows.Add(row);
-
-            SqlCommandBuilder cmdBuilder = new SqlCommandBuilder(studentsAdapter);
-
-            studentsAdapter.InsertCommand = cmdBuilder.GetInsertCommand(true);
-            studentsAdapter.Update(ds, "students");
-
-            MessageBox.Show("Student saved successfully.");
-
+            
             isSaved = true;
         }
 
